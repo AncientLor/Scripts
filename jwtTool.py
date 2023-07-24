@@ -3,14 +3,17 @@
 import hmac, hashlib, base64, re, sys
 #import json
 
+# Get wordlist linecount
 linecount = sum(1 for _ in open(sys.argv[2], 'rb'))
 
+#Seperate JWT header/payload
 def jwtParser(jwt=sys.argv[1]):
     jwt_list = jwt.encode().split(b".")
     msg = jwt_list[0] + b"." + jwt_list[1]
     valid_sig = jwt_list[2]
     return msg, valid_sig
 
+#Check for HS256
 def algCheck():
     decoded = base64.urlsafe_b64decode(jwtParser()[0]).decode('utf-8')
     if "HS256" in decoded:
@@ -18,6 +21,7 @@ def algCheck():
     else:
         return False
 
+#Brute Force JWT key
 def jwtCrack():
     if algCheck() == False:
         print("Only JWTs using HS256 are supported at this time.")
@@ -44,6 +48,7 @@ def jwtCrack():
         else:
             return valid_key
 
+#Forge new JWT with discovered key
 def jwtForge(key):
     key = key.encode()
     h = str('{"typ":"JWT","alg":"HS256"}')                      #Default HS256 JWT Header 
