@@ -1,5 +1,9 @@
 #! /usr/bin/env python3
 
+# A simple utility to decode/crack/forge JSON Web Tokens.
+# Currently only works with JWTs using HS256.
+
+
 import hmac, hashlib, base64, sys
 
 # Get wordlist linecount
